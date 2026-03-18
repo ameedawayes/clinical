@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1b2a">
+<title>NG Tube Clinical Simulator — DTCC Nursing</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --navy-mid: #162032;
+    --navy-light: #1e2f45;
+    --teal: #00c9a7;
+    --teal-dim: #00a389;
+    --amber: #f5a623;
+    --red: #e85d5d;
+    --green: #4caf82;
+    --blue-accent: #4a9eff;
+    --text-primary: #eef2f7;
+    --text-muted: #7a90a8;
+    --text-dim: #4a637d;
+    --card-bg: #162032;
+    --card-border: #1e3550;
+    --critical-color: #e85d5d;
+    --hint-color: #f5a623;
+    --answer-color: #4a9eff;
+    --font-display: 'DM Serif Display', serif;
+    --font-body: 'Outfit', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  html { height: -webkit-fill-available; }
+
+  body {
+    background: var(--navy);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── SCREENS ─── */
+  .screen { display: none; min-height: 100vh; min-height: -webkit-fill-available; }
+  .screen.active { display: flex; }
+
+  /* ─── WELCOME SCREEN ─── */
+  #welcome-screen {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow-y: auto;
+    padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+  }
+  #welcome-screen::before {
+    content: '';
+    position: fixed;
+    width: 500px; height: 500px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,201,167,0.08) 0%, transparent 70%);
+    top: -150px; left: -150px;
+    pointer-events: none;
+  }
+  .welcome-inner {
+    text-align: center;
+    z-index: 1;
+    padding: 48px 24px 40px;
+    width: 100%;
+    max-width: 520px;
+  }
+  .school-badge {
+    display: inline-block;
+    background: var(--navy-light);
+    border: 1px solid var(--card-border);
+    border-radius: 30px;
+    padding: 7px 18px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin-bottom: 28px;
+    font-family: var(--font-mono);
+  }
+  .welcome-title {
+    font-family: var(--font-display);
+    font-size: clamp(34px, 9vw, 56px);
+    line-height: 1.1;
+    margin-bottom: 16px;
+    background: linear-gradient(135deg, var(--text-primary) 0%, var(--teal) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .welcome-sub {
+    font-size: 15px;
+    color: var(--text-muted);
+    line-height: 1.7;
+    margin-bottom: 36px;
+    font-weight: 300;
+  }
+  .phase-cards {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 36px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .phase-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    padding: 18px 24px;
+    flex: 1; min-width: 140px;
+    text-align: left;
+  }
+  .phase-card .phase-num {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--teal);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .phase-card .phase-name { font-size: 17px; font-weight: 600; }
+  .phase-card .phase-count { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .btn-start {
+    background: var(--teal);
+    color: var(--navy);
+    border: none;
+    border-radius: 14px;
+    padding: 17px 48px;
+    font-size: 17px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    cursor: pointer;
+    width: 100%;
+    letter-spacing: 0.3px;
+    -webkit-appearance: none;
+  }
+  .btn-start:active { opacity: 0.85; transform: scale(0.98); }
+
+  /* ─── SIMULATOR SCREEN ─── */
+  #sim-screen {
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    height: 100vh;
+    height: -webkit-fill-available;
+  }
+
+  /* TOP BAR */
+  .top-bar {
+    background: var(--navy-mid);
+    border-bottom: 1px solid var(--card-border);
+    padding: 12px 16px;
+    padding-top: calc(12px + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .top-bar-title {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--teal);
+    letter-spacing: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .progress-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  .progress-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+  .progress-bar-outer {
+    background: var(--navy-light);
+    border-radius: 4px;
+    height: 5px;
+    overflow: hidden;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), var(--blue-accent));
+    border-radius: 4px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .phase-badge {
+    background: var(--navy-light);
+    border: 1px solid var(--card-border);
+    border-radius: 7px;
+    padding: 5px 10px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--amber);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* MAIN LAYOUT — single column on mobile */
+  .sim-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+
+  /* PATIENT PANEL — collapsible strip on mobile */
+  .patient-panel {
+    width: 100%;
+    background: var(--navy-mid);
+    border-bottom: 1px solid var(--card-border);
+    overflow: hidden;
+  }
+  .patient-toggle {
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    -webkit-appearance: none;
+  }
+  .patient-toggle:active { opacity: 0.7; }
+  .toggle-arrow { transition: transform 0.3s; font-size: 10px; }
+  .patient-panel.expanded .toggle-arrow { transform: rotate(180deg); }
+  .patient-inner {
+    display: none;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 4px 16px 16px;
+  }
+  .patient-panel.expanded .patient-inner { display: flex; }
+  .patient-scene {
+    width: 110px;
+    height: 150px;
+    flex-shrink: 0;
+  }
+  .patient-scene svg { width: 100%; height: 100%; }
+  .scene-label {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--teal);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+  .equipment-list { flex: 1; min-width: 0; }
+  .equipment-title {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .equipment-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 5px 0;
+    border-bottom: 1px solid var(--navy-light);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  .equipment-item.active { color: var(--teal); }
+  .equipment-item .eq-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+  .equipment-item.active .eq-dot { background: var(--teal); }
+
+  /* INTERACTION PANEL */
+  .interaction-panel {
+    flex: 1;
+    padding: 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* STEP HEADER */
+  .step-header {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .step-number {
+    display: inline-block;
+    background: var(--navy-light);
+    border: 1px solid var(--card-border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    align-self: flex-start;
+  }
+  .step-number.critical {
+    background: rgba(232,93,93,0.1);
+    border-color: rgba(232,93,93,0.4);
+    color: var(--critical-color);
+  }
+  .step-title-block { width: 100%; }
+  .critical-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: rgba(232,93,93,0.1);
+    border: 1px solid rgba(232,93,93,0.3);
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--critical-color);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .step-context {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--text-primary);
+  }
+
+  /* CHALLENGE BOX */
+  .challenge-box {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .challenge-prompt {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+    font-family: var(--font-mono);
+  }
+  .response-textarea {
+    width: 100%;
+    background: var(--navy);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 14px;
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    font-size: 16px; /* 16px prevents iOS auto-zoom */
+    resize: none;
+    min-height: 90px;
+    outline: none;
+    transition: border-color 0.2s;
+    line-height: 1.6;
+    -webkit-appearance: none;
+  }
+  .response-textarea:focus { border-color: var(--teal); }
+  .response-textarea::placeholder { color: var(--text-dim); }
+
+  /* ACTION BUTTONS — 2x2 grid on mobile */
+  .action-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: none;
+    border-radius: 12px;
+    padding: 14px 12px;
+    font-size: 15px;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    min-height: 50px;
+    -webkit-appearance: none;
+  }
+  .btn:active { opacity: 0.8; transform: scale(0.97); }
+  .btn-next {
+    background: var(--teal);
+    color: var(--navy);
+    grid-column: 1 / -1; /* full width */
+  }
+  .btn-hint {
+    background: rgba(245,166,35,0.1);
+    border: 1px solid rgba(245,166,35,0.4);
+    color: var(--hint-color);
+  }
+  .btn-answer {
+    background: rgba(74,158,255,0.1);
+    border: 1px solid rgba(74,158,255,0.4);
+    color: var(--answer-color);
+  }
+  .btn-skip {
+    background: transparent;
+    border: 1px solid var(--card-border);
+    color: var(--text-muted);
+    grid-column: 1 / -1;
+    font-size: 14px;
+    min-height: 42px;
+    padding: 10px;
+  }
+
+  /* REVEAL PANELS */
+  .reveal-panel {
+    border-radius: 12px;
+    padding: 16px;
+    display: none;
+    animation: fadeIn 0.3s ease;
+  }
+  .reveal-panel.visible { display: block; }
+  .hint-panel {
+    background: rgba(245,166,35,0.07);
+    border: 1px solid rgba(245,166,35,0.25);
+  }
+  .answer-panel {
+    background: rgba(74,158,255,0.07);
+    border: 1px solid rgba(74,158,255,0.25);
+  }
+  .reveal-label {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    font-weight: 600;
+  }
+  .hint-panel .reveal-label { color: var(--hint-color); }
+  .answer-panel .reveal-label { color: var(--answer-color); }
+  .reveal-text {
+    font-size: 14px;
+    line-height: 1.75;
+    color: var(--text-primary);
+  }
+
+  /* PHASE TRANSITION */
+  .phase-transition {
+    background: var(--navy-mid);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .phase-transition .pt-icon { font-size: 44px; margin-bottom: 14px; }
+  .phase-transition h2 {
+    font-family: var(--font-display);
+    font-size: 26px;
+    margin-bottom: 10px;
+    color: var(--teal);
+  }
+  .phase-transition p { color: var(--text-muted); margin-bottom: 22px; font-size: 14px; line-height: 1.6; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── REPORT SCREEN ─── */
+  #report-screen {
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 40px 16px;
+    padding-top: calc(40px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .report-card { width: 100%; max-width: 600px; }
+  .report-header { text-align: center; margin-bottom: 32px; }
+  .report-header h1 {
+    font-family: var(--font-display);
+    font-size: clamp(30px, 8vw, 42px);
+    background: linear-gradient(135deg, var(--text-primary), var(--teal));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 6px;
+  }
+  .report-header p { color: var(--text-muted); font-size: 13px; }
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .score-cell {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 16px 10px;
+    text-align: center;
+  }
+  .score-cell:first-child {
+    grid-column: 1 / -1;
+    padding: 20px;
+  }
+  .score-cell .sc-val {
+    font-family: var(--font-display);
+    font-size: 32px;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .score-cell:first-child .sc-val { font-size: 44px; }
+  .score-cell .sc-label {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .sc-green { color: var(--green); }
+  .sc-red { color: var(--red); }
+  .sc-amber { color: var(--amber); }
+  .sc-blue { color: var(--blue-accent); }
+
+  .report-section-title {
+    font-size: 11px;
+    font-family: var(--font-mono);
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--card-border);
+  }
+  .report-step-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--navy-light);
+  }
+  .report-step-row:last-child { border-bottom: none; }
+  .rs-num {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    width: 38px;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .rs-content { flex: 1; min-width: 0; }
+  .rs-title { font-size: 13px; color: var(--text-primary); line-height: 1.5; }
+  .rs-meta {
+    display: flex;
+    gap: 6px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+  }
+  .rs-tag {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    border-radius: 5px;
+    padding: 2px 7px;
+    border: 1px solid;
+  }
+  .rs-tag.critical { color: var(--critical-color); border-color: rgba(232,93,93,0.3); background: rgba(232,93,93,0.08); }
+  .rs-tag.hint-used { color: var(--hint-color); border-color: rgba(245,166,35,0.3); background: rgba(245,166,35,0.08); }
+  .rs-tag.answer-used { color: var(--answer-color); border-color: rgba(74,158,255,0.3); background: rgba(74,158,255,0.08); }
+  .rs-tag.skipped { color: var(--text-muted); border-color: var(--card-border); background: var(--navy-light); }
+  .rs-tag.completed { color: var(--green); border-color: rgba(76,175,130,0.3); background: rgba(76,175,130,0.08); }
+  .rs-icon { font-size: 16px; padding-top: 2px; flex-shrink: 0; }
+  .btn-restart {
+    background: var(--teal);
+    color: var(--navy);
+    border: none;
+    border-radius: 14px;
+    padding: 17px 40px;
+    font-size: 17px;
+    font-weight: 700;
+    font-family: var(--font-body);
+    cursor: pointer;
+    margin-top: 32px;
+    display: block;
+    width: 100%;
+    -webkit-appearance: none;
+  }
+  .btn-restart:active { opacity: 0.85; }
+
+  /* Scrollbar (desktop only) */
+  @media (min-width: 768px) {
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--card-border); border-radius: 4px; }
+
+    /* Restore desktop side-by-side layout */
+    .sim-body { flex-direction: row; overflow: hidden; height: calc(100vh - 65px); }
+    .patient-panel { width: 300px; flex-shrink: 0; border-bottom: none; border-right: 1px solid var(--card-border); display: flex; flex-direction: column; align-items: center; padding: 24px 20px; overflow-y: auto; }
+    .patient-toggle { display: none; }
+    .patient-inner { display: flex !important; flex-direction: column; align-items: center; padding: 0; }
+    .patient-scene { width: 200px; height: 270px; margin-bottom: 20px; }
+    .scene-label { margin-bottom: 16px; font-size: 11px; text-align: center; }
+    .equipment-list { width: 100%; }
+    .equipment-item { font-size: 13px; padding: 7px 0; }
+    .interaction-panel { overflow-y: auto; padding: 28px 32px; }
+    .step-header { flex-direction: row; gap: 14px; }
+    .step-number { align-self: auto; white-space: nowrap; }
+    .step-context { font-size: 18px; }
+    .action-row { display: flex; flex-wrap: wrap; }
+    .btn-next { grid-column: unset; flex: 1; }
+    .btn-skip { grid-column: unset; margin-left: auto; min-height: unset; padding: 11px 20px; font-size: 14px; }
+    .score-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .score-cell:first-child { grid-column: unset; }
+    .score-cell .sc-val { font-size: 36px; }
+    .score-cell:first-child .sc-val { font-size: 36px; }
+  }
+  
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════
+     WELCOME SCREEN
+══════════════════════════════════ -->
+<div id="welcome-screen" class="screen active">
+  <div class="welcome-inner">
+    <div class="school-badge">DTCC · Nursing Department</div>
+    <h1 class="welcome-title">NG Tube<br>Clinical Simulator</h1>
+    <p class="welcome-sub">Practice nasogastric tube insertion and removal step by step. Recite each action from memory — use hints or reveal the full answer when you need them. A full performance report awaits at the end.</p>
+    <div class="phase-cards">
+      <div class="phase-card">
+        <div class="phase-num">Phase 01</div>
+        <div class="phase-name">Insertion</div>
+        <div class="phase-count">34 steps</div>
+      </div>
+      <div class="phase-card">
+        <div class="phase-num">Phase 02</div>
+        <div class="phase-name">Removal</div>
+        <div class="phase-count">18 steps</div>
+      </div>
+    </div>
+    <button class="btn-start" onclick="startSim()">Begin Simulation →</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     SIMULATOR SCREEN
+══════════════════════════════════ -->
+<div id="sim-screen" class="screen">
+  <div class="top-bar">
+    <div class="top-bar-title">NG SIM</div>
+    <div class="progress-wrap">
+      <div class="progress-meta">
+        <span id="prog-label">Step 1 of 52</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="prog-bar"></div>
+      </div>
+    </div>
+    <div class="phase-badge" id="phase-badge">INSERTION</div>
+  </div>
+
+  <div class="sim-body">
+    <!-- Patient Visual -->
+    <div class="patient-panel" id="patient-panel">
+      <button class="patient-toggle" onclick="togglePatientPanel()">
+        <span id="scene-label">Patient at rest</span>
+        <span class="toggle-arrow" id="toggle-arrow">▼</span>
+      </button>
+      <div class="patient-inner">
+      <div class="patient-scene">
+        <svg id="patient-svg" viewBox="0 0 240 320" xmlns="http://www.w3.org/2000/svg">
+          <!-- Bed base -->
+          <rect x="10" y="260" width="220" height="14" rx="4" fill="#1e3550"/>
+          <rect x="20" y="270" width="200" height="8" rx="2" fill="#162032"/>
+          <!-- Pillow -->
+          <rect x="30" y="210" width="180" height="55" rx="14" fill="#1e3550"/>
+          <!-- Body -->
+          <rect x="50" y="140" width="140" height="120" rx="20" fill="#2a4060"/>
+          <!-- Gown lines -->
+          <line x1="120" y1="145" x2="120" y2="255" stroke="#1e3550" stroke-width="1.5"/>
+          <line x1="80" y1="155" x2="100" y2="255" stroke="#1e3550" stroke-width="1"/>
+          <line x1="160" y1="155" x2="140" y2="255" stroke="#1e3550" stroke-width="1"/>
+          <!-- Neck -->
+          <rect x="105" y="120" width="30" height="28" rx="6" fill="#3a5a80"/>
+          <!-- Head -->
+          <ellipse cx="120" cy="100" rx="42" ry="48" fill="#3a5a80"/>
+          <!-- Face details -->
+          <ellipse cx="107" cy="92" rx="5" ry="6" fill="#2a4060"/>
+          <ellipse cx="133" cy="92" rx="5" ry="6" fill="#2a4060"/>
+          <path d="M108 114 Q120 122 132 114" stroke="#4a7090" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Nose -->
+          <ellipse cx="120" cy="105" rx="4" ry="3" fill="#2a4060" id="nose-svg"/>
+          <!-- Hair -->
+          <path d="M80 80 Q90 48 120 44 Q150 48 160 80" fill="#1a2a40"/>
+          <!-- NG Tube (hidden by default) -->
+          <g id="ng-tube-svg" opacity="0" style="transition: opacity 0.5s;">
+            <path d="M120 107 Q118 140 116 180 Q115 230 115 255" stroke="#00c9a7" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.8"/>
+            <circle cx="120" cy="107" r="3" fill="#00c9a7"/>
+          </g>
+          <!-- Tape on nose (hidden) -->
+          <g id="tape-svg" opacity="0" style="transition: opacity 0.5s;">
+            <rect x="108" y="100" width="24" height="6" rx="2" fill="#f5a623" opacity="0.7"/>
+          </g>
+          <!-- Arm band -->
+          <rect x="50" y="175" width="18" height="28" rx="4" fill="#f5a623" opacity="0.7"/>
+          <rect x="52" y="179" width="14" height="3" rx="1" fill="#162032"/>
+          <rect x="52" y="185" width="14" height="3" rx="1" fill="#162032"/>
+          <rect x="52" y="191" width="10" height="3" rx="1" fill="#162032"/>
+          <!-- HOB indicator -->
+          <g id="hob-indicator" opacity="0">
+            <rect x="12" y="200" width="26" height="55" rx="4" fill="#00c9a7" opacity="0.2"/>
+            <text x="25" y="220" text-anchor="middle" fill="#00c9a7" font-size="7" font-family="monospace">90°</text>
+            <text x="25" y="230" text-anchor="middle" fill="#00c9a7" font-size="6" font-family="monospace">HOB</text>
+          </g>
+          <!-- PPE indicator -->
+          <g id="ppe-indicator" opacity="0">
+            <!-- Mask -->
+            <ellipse cx="120" cy="113" rx="20" ry="10" fill="#00c9a7" opacity="0.4"/>
+            <!-- Goggles -->
+            <rect x="98" y="84" width="44" height="14" rx="6" fill="none" stroke="#00c9a7" stroke-width="1.5" opacity="0.6"/>
+          </g>
+        </svg>
+      </div><!-- end patient-scene -->
+      <div class="equipment-list" id="equipment-list"></div>
+      </div><!-- end patient-inner -->
+    </div>
+
+    <!-- Interaction -->
+    <div class="interaction-panel" id="interaction-panel">
+      <!-- Content rendered by JS -->
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════
+     REPORT SCREEN
+══════════════════════════════════ -->
+<div id="report-screen" class="screen">
+  <div class="report-card">
+    <div class="report-header">
+      <h1>Performance Report</h1>
+      <p>NG Tube Clinical Simulation — DTCC Nursing Department</p>
+    </div>
+    <div class="score-grid" id="score-grid"></div>
+    <div class="report-section-title">Step-by-Step Breakdown</div>
+    <div id="report-steps"></div>
+    <button class="btn-restart" onclick="restartSim()">↺ Restart Simulation</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// STEP DATA
+// ══════════════════════════════════════════════════════
+const STEPS = [
+  // ─── INSERTION (Phase 1) ───
+  {
+    phase: 'INSERTION', num: 1, critical: true,
+    context: 'You are about to begin the NG tube procedure. What is your very first action before touching any equipment?',
+    hint: 'Think about what authorizes you to perform any nursing procedure. Check the provider\'s documentation.',
+    answer: 'Check the primary care provider\'s (PCP) order for insertion of the NG tube and consider the risks associated with nasogastric tube insertion. Indications include aspiration, bowel rest (bowel obstruction or recent bowel surgery), and intractable vomiting.',
+    scene: 'chart', equipment: ['Chart / PCP Order']
+  },
+  {
+    phase: 'INSERTION', num: 2, critical: true,
+    context: 'You have the PCP order. Before gathering supplies, what must you review in the patient\'s chart?',
+    hint: 'Certain histories make NG tube insertion dangerous or contraindicated.',
+    answer: 'Check the chart for contraindications: history of gastric weight-loss surgeries, liver problems/disorders, bleeding disorders, and esophageal varices.',
+    scene: 'chart', equipment: ['Chart / PCP Order']
+  },
+  {
+    phase: 'INSERTION', num: 3, critical: false,
+    context: 'No contraindications found. Now you head to the supply room. What equipment do you gather?',
+    hint: 'You need the tube itself, something to measure with, something to verify placement, lubricant, and supplies for patient comfort.',
+    answer: 'Gather: clean gloves, PPE, NG tube, 60 ml piston syringe, cup of room temperature or sterile water, lubricant, tape measure, stethoscope, tape, safety pin, litmus paper or gastric pH strip, nonsterile drape, emesis basin, tissues, cup of water with straw or ice chips, and penlight.',
+    scene: 'gather', equipment: ['NG Tube', '60 ml Syringe', 'Lubricant', 'Tape + Safety Pin', 'pH Strip / Litmus', 'Emesis Basin', 'Penlight', 'PPE']
+  },
+  {
+    phase: 'INSERTION', num: 4, critical: true,
+    context: 'Equipment gathered. You\'re about to enter the patient\'s room. What do you do immediately?',
+    hint: 'This is the most basic infection control measure in nursing.',
+    answer: 'Perform hand hygiene.',
+    scene: 'hygiene', equipment: ['Hand Hygiene']
+  },
+  {
+    phase: 'INSERTION', num: 5, critical: true,
+    context: 'You enter the patient\'s room. What must you do before doing anything to or for the patient?',
+    hint: 'Two identifiers are required — one is verbal, one is visual.',
+    answer: 'Identify the patient by asking for their name and date of birth while looking at their arm band. Ask if they have any allergies.',
+    scene: 'identify', equipment: ['Patient ID Check']
+  },
+  {
+    phase: 'INSERTION', num: 6, critical: true,
+    context: 'Patient is identified. What is your next obligation before starting the procedure?',
+    hint: 'The patient has the right to understand what is happening and why.',
+    answer: 'Explain the procedure to the patient and provide rationale as to why the tube is needed ("nasogastric tube — it won\'t be comfortable but it will work, not to worry"). Answer any questions.',
+    scene: 'explain', equipment: ['Patient Education']
+  },
+  {
+    phase: 'INSERTION', num: 7, critical: false,
+    context: 'Consent and understanding obtained. What do you do to protect the patient\'s dignity?',
+    hint: 'Think about the patient\'s right to privacy during a procedure.',
+    answer: 'Provide for privacy by pulling the patient\'s bedside curtain or shutting the door.',
+    scene: 'privacy', equipment: []
+  },
+  {
+    phase: 'INSERTION', num: 8, critical: false,
+    context: 'Privacy ensured. How do you prepare the physical environment for the procedure?',
+    hint: 'Think about ergonomics and safe body mechanics for the nurse.',
+    answer: 'Raise the bed to a comfortable working height.',
+    scene: 'bed', equipment: []
+  },
+  {
+    phase: 'INSERTION', num: 9, critical: false,
+    context: 'Bed is raised. How do you position the patient, and what comfort items do you have ready?',
+    hint: 'Gravity assists the tube into the stomach. Think about the best HOB angle.',
+    answer: 'Assist the patient to high Fowler\'s position and elevate the head of the bed 90 degrees. Have emesis basin and tissues handy.',
+    scene: 'fowlers', equipment: ['Emesis Basin', 'Tissues']
+  },
+  {
+    phase: 'INSERTION', num: 10, critical: false,
+    context: 'Patient is in high Fowler\'s. Before choosing which nostril to use, what assessment do you perform?',
+    hint: 'You need to confirm which passage is patent and safe to use.',
+    answer: 'Ask the patient if they have a deviated septum, nasal polyps, prior nasal surgery, or a broken nose. Using a penlight, visualize the inner aspect of each nare to assess patency. Ask the patient which nare feels more open.',
+    scene: 'assess', equipment: ['Penlight']
+  },
+  {
+    phase: 'INSERTION', num: 11, critical: false,
+    context: 'Nare selected. Before taping, what surface prep do you do and why?',
+    hint: 'Tape won\'t stick to a dirty or oily surface — think about the table edge too.',
+    answer: 'Clean the top and side edge of the table where the tape will go with an alcohol prep and allow to dry. Also clean the top of the patient\'s nose to ensure the tape will stick.',
+    scene: 'prep', equipment: ['Alcohol Prep Pads']
+  },
+  {
+    phase: 'INSERTION', num: 12, critical: false,
+    context: 'Surfaces prepped. How do you prepare the tape for securing the tube?',
+    hint: 'You need three pieces of tape in specific sizes, and one is split.',
+    answer: 'Tear a 3" piece of tape and split the bottom upwards 2" (or use packaged nose tape for NG tubes). Tear two additional pieces: one 2" and one 1/2".',
+    scene: 'prep', equipment: ['Tape (3 pieces)']
+  },
+  {
+    phase: 'INSERTION', num: 13, critical: false,
+    context: 'Tape is ready. How do you prepare the NG tube itself before insertion?',
+    hint: 'The plug goes into the clear end (not the blue vent). Remove the hollow connector piece first.',
+    answer: 'Open the NG package and plug package. Remove the hollow connector piece from the end of the NG tube. Remove the cap from the plug and put the plug in the end of the NG tube (clear tube, not the blue vent).',
+    scene: 'gather', equipment: ['NG Tube', 'Plug']
+  },
+  {
+    phase: 'INSERTION', num: 14, critical: true,
+    context: 'Tube is prepped. How do you determine how far to insert the tube, and how do you mark it?',
+    hint: 'Think: nostril → earlobe → xiphoid process. You mark it with a small piece of tape.',
+    answer: 'Measure the distance by placing the tip of the tube at the patient\'s nostril, extending to the tip of the earlobe, then to the tip of the xiphoid process (with gown moved down). Mark the measurement by placing the 1/2" piece of tape on the tubing.',
+    scene: 'measure', equipment: ['Tape Measure', '½" Tape Marker']
+  },
+  {
+    phase: 'INSERTION', num: 15, critical: true,
+    context: 'Measurement marked. Given the risk of exposure, what do you don and in what order?',
+    hint: 'Think about the risk of vomitus splash. Full PPE is required here.',
+    answer: 'Don PPE: mask, goggles, gown, and clean gloves — due to the chance of exposure to vomitus.',
+    scene: 'ppe', equipment: ['Mask', 'Goggles', 'Gown', 'Clean Gloves']
+  },
+  {
+    phase: 'INSERTION', num: 16, critical: true,
+    context: 'PPE on. How do you prepare the patient and the tube for insertion?',
+    hint: 'Think about lubrication amount and where the drape goes.',
+    answer: 'Place a nonsterile drape on the patient\'s chest and give the patient a basin. Lubricate the tip of the tube (2" to 4") with water-soluble lubricant.',
+    scene: 'ppe', equipment: ['Nonsterile Drape', 'Lubricant']
+  },
+  {
+    phase: 'INSERTION', num: 17, critical: true,
+    context: 'Tube is lubricated and drape is placed. What critical teaching do you give the patient before inserting?',
+    hint: 'The patient needs to know exactly what to do when the tube reaches the pharynx — and make sure they can drink water.',
+    answer: 'Explain in detail the insertion process: tell the patient you will insert the tube into the nare, and at a certain point they will put their chin to their chest and swallow, swallow, swallow — this helps ease the tube into the stomach. Hand the patient the water. Make sure they can drink water.',
+    scene: 'explain', equipment: ['Cup of Water / Straw']
+  },
+  {
+    phase: 'INSERTION', num: 18, critical: false,
+    context: 'Patient is prepared and instructed. How do you physically begin insertion?',
+    hint: 'Stabilize the head with your nondominant hand. Insert gently — the patient may gag at the pharynx.',
+    answer: 'Gently place your nondominant hand on the forehead to stabilize the head. Gently insert the tube into the nostril. The patient may gag when the tube reaches the pharynx. Offer comfort and reassurance.',
+    scene: 'insert', equipment: ['NG Tube']
+  },
+  {
+    phase: 'INSERTION', num: 19, critical: true,
+    context: 'The tube reaches the pharynx (you feel resistance). What critical patient action do you instruct and why?',
+    hint: 'Chin to chest + swallowing closes the airway and opens the esophagus. What should you NEVER do? Stop if the patient coughs or breathes.',
+    answer: 'When the pharynx is reached, instruct the patient to put chin to chest and swallow, swallow, swallow water through a straw (or simply swallow if no fluids allowed). Advance tube downward. STOP when the patient breathes or coughs. If gagging/coughing persist, stop and check with tongue blade and flashlight. If curled in mouth or throat, straighten and re-advance. NEVER use force. Rotate if resistance. NEVER let go of the tube.',
+    scene: 'insert', equipment: []
+  },
+  {
+    phase: 'INSERTION', num: 20, critical: false,
+    context: 'Signs of distress appear — gasping, cyanosis, inability to speak, or bleeding. What do you do?',
+    hint: 'Patient safety always comes first. There is no hesitation here.',
+    answer: 'Immediately discontinue the procedure and remove the tube.',
+    scene: 'insert', equipment: []
+  },
+  {
+    phase: 'INSERTION', num: 21, critical: true,
+    context: 'Tube is advanced to the tape marking. How do you immediately secure it?',
+    hint: 'One hand stays on the tube at all times. Think about how the split tape wraps.',
+    answer: 'While keeping one hand on the tube, secure with tape: place the unsplit end of the 3" tape over the bridge of the patient\'s nose. Wrap the split ends around the tubing only. Be careful not to pull the tube against the nostril.',
+    scene: 'secure', equipment: ['Tape (3" piece)']
+  },
+  {
+    phase: 'INSERTION', num: 22, critical: false,
+    context: 'Nose tape is applied. What do you do with the third piece of tape and the safety pin?',
+    hint: 'The pin secures the tube to the gown so it doesn\'t pull on the nose.',
+    answer: 'Place the third piece of tape near the end of the tube where it begins to get thicker. Attach the safety pin to the tape.',
+    scene: 'secure', equipment: ['Tape (2" piece)', 'Safety Pin']
+  },
+  {
+    phase: 'INSERTION', num: 23, critical: true,
+    context: 'Tube is secured. CRITICAL — before using the tube for anything, what must you verify?',
+    hint: 'Two methods exist: gastric pH and X-ray. Describe BOTH methods fully.',
+    answer: 'Check placement prior to using the tube using the method specified by agency policy. METHOD 1 — Gastric pH: Aspirate 5–10 ml of gastric fluid, bend tubing, remove syringe, measure pH of aspirated fluid using pH paper. Compare to manufacturer chart. pH must be within facility parameters. If within parameters, return gastric contents to stomach, flush with 30 mL room temp water by gravity, then place reflux valve and secure above stomach level at shoulder. METHOD 2 — X-ray: Measure tubing length in cm from nare to distal end (not vent), document, secure to gown, send to X-ray, remeasure on return, read X-ray report for confirmation.',
+    scene: 'verify', equipment: ['60 ml Syringe', 'pH Strip / Litmus', 'Stethoscope']
+  },
+  {
+    phase: 'INSERTION', num: 24, critical: false,
+    context: 'Placement is confirmed. How do you finalize the tube\'s position and connect suction if ordered?',
+    hint: 'Think about the cap position (12 o\'clock = upward) and what prevents gastric leakage.',
+    answer: 'Secure the pin to the patient gown near the shoulder with the cap end in the 12 o\'clock position (upward, to prevent leaking of gastric contents). If suction is ordered, attach tube to suction per PCP orders.',
+    scene: 'secure', equipment: ['Safety Pin', 'Suction (if ordered)']
+  },
+  {
+    phase: 'INSERTION', num: 25, critical: false,
+    context: 'Tube is secured and connected. How do you restore a safe patient environment?',
+    hint: 'Think: bed position, rails, call bell, and bed lock.',
+    answer: 'Lower the bed to the lowest position, put up the side rail, put the call bell within reach, and ensure the bed is locked.',
+    scene: 'fowlers', equipment: []
+  },
+  {
+    phase: 'INSERTION', num: 26, critical: true,
+    context: 'Environment is safe. What ongoing tube care and oral hygiene does the patient need?',
+    hint: 'Think frequency of oral care, and what you apply to lips and nares.',
+    answer: 'Check placement every time before using the tube (using gastric pH or tube-length measurement per institution policy). Assist with or provide oral hygiene at 2–4 hour intervals. Lubricate lips and clean nares as needed. Offer analgesic throat lozenges or anesthetic spray for irritation if ordered.',
+    scene: 'care', equipment: ['Oral Hygiene Supplies']
+  },
+  {
+    phase: 'INSERTION', num: 27, critical: false,
+    context: 'Ongoing care noted. How do you wrap up the procedure at the bedside?',
+    hint: 'Think about the order of PPE removal and what comes next.',
+    answer: 'Remove all equipment, remove gloves, remove PPE.',
+    scene: 'hygiene', equipment: []
+  },
+  {
+    phase: 'INSERTION', num: 28, critical: true,
+    context: 'Equipment removed. What is the final action before leaving the room?',
+    hint: 'Always the last step after any patient contact.',
+    answer: 'Perform hand hygiene.',
+    scene: 'hygiene', equipment: ['Hand Hygiene']
+  },
+  {
+    phase: 'INSERTION', num: 29, critical: true,
+    context: 'Now at the documentation station. What must you document for this NG tube insertion?',
+    hint: 'Think: nare used, tube type/size, how they tolerated it, tube length, placement method, flush amount, suction color/amount if applicable.',
+    answer: 'Document: assessment of the nares and throat, that you inserted a 14 fr Salem sump nasogastric tube into the (right or left) nare, how the patient tolerated the procedure, the length of the tube from the nose to the end of the clear plastic tube, the method used to determine placement, whether you flushed (include amount), and if connected to suction: the amount and color of contents in the suction container. Document any flush amount as intake on I&Os.',
+    scene: 'chart', equipment: ['Chart / Documentation']
+  },
+
+  // ─── PHASE TRANSITION ─── (handled specially, index 29 in array = index 30 overall)
+
+  // ─── REMOVAL (Phase 2) ───
+  {
+    phase: 'REMOVAL', num: 1, critical: true,
+    context: 'The PCP has determined the NG tube is no longer needed. What is your very first step before removal?',
+    hint: 'Same rule as insertion — authorization comes first.',
+    answer: 'Check the PCP\'s order for removal of the NG tube.',
+    scene: 'chart', equipment: ['Chart / PCP Order']
+  },
+  {
+    phase: 'REMOVAL', num: 2, critical: false,
+    context: 'Order verified. What equipment do you gather for removal?',
+    hint: 'Similar to insertion supplies but you don\'t need the NG tube itself — think about what you\'ll still need: syringe, drape, basin, assessment tools.',
+    answer: 'Gather: clean gloves, PPE, 60 ml piston syringe, cup of water or sterile water, tape measure, stethoscope, litmus paper or gastric pH strip, nonsterile drape, emesis basin, tissues, cup of water with straw or ice chips, and penlight.',
+    scene: 'gather', equipment: ['60 ml Syringe', 'PPE', 'Emesis Basin', 'Penlight', 'pH Strip / Litmus']
+  },
+  {
+    phase: 'REMOVAL', num: 3, critical: true,
+    context: 'Equipment gathered. What do you do before entering the patient\'s room?',
+    hint: 'Two mandatory steps: infection control and patient verification.',
+    answer: 'Perform hand hygiene. Identify the patient.',
+    scene: 'hygiene', equipment: ['Hand Hygiene']
+  },
+  {
+    phase: 'REMOVAL', num: 4, critical: true,
+    context: 'Patient identified. Before removing the tube, what critical assessment must you perform?',
+    hint: 'You must confirm the GI system is ready for the tube to be removed. Think: abdomen, bowel sounds, flatus, nausea.',
+    answer: 'Perform a full GI assessment: assess abdomen for distention and bowel sounds, ask when they last had a bowel movement and if it was formed, ask if they are passing gas (flatus), ask if they are experiencing any nausea or vomiting. Explain the procedure — describe it may be uncomfortable but is a very quick procedure.',
+    scene: 'assess', equipment: ['Stethoscope']
+  },
+  {
+    phase: 'REMOVAL', num: 5, critical: false,
+    context: 'GI assessment complete and removal is appropriate. What do you put on and what environment do you prepare?',
+    hint: 'Privacy, bed height, patient position, drape, tissues, basin.',
+    answer: 'Put on clean gloves and PPE. Pull the patient\'s bedside curtain. Raise the bed to the appropriate height and place the patient in High Fowler\'s. Place a nonsterile drape across the patient\'s chest. Give tissues and emesis basin to the patient.',
+    scene: 'fowlers', equipment: ['Gloves', 'PPE', 'Nonsterile Drape', 'Emesis Basin', 'Tissues']
+  },
+  {
+    phase: 'REMOVAL', num: 6, critical: false,
+    context: 'Patient is positioned. If suction was connected, what do you do before checking placement?',
+    hint: 'Disconnect and unpin before any other steps.',
+    answer: 'If applicable, discontinue suction and separate the tube from suction. Unpin the tube from the patient\'s gown.',
+    scene: 'secure', equipment: []
+  },
+  {
+    phase: 'REMOVAL', num: 7, critical: true,
+    context: 'Suction disconnected and tube unpinned. What must you verify before flushing?',
+    hint: 'Always confirm placement before any tube manipulation — even during removal. If you can\'t verify, adjust your next step.',
+    answer: 'Check placement according to agency policy. (If placement cannot be verified, do NOT flush prior to removal.)',
+    scene: 'verify', equipment: ['pH Strip / Litmus', 'Stethoscope']
+  },
+  {
+    phase: 'REMOVAL', num: 8, critical: false,
+    context: 'Placement confirmed. What do you do to prepare the tube for removal and how do you free it from the nose?',
+    hint: 'Flush, replace cap, then carefully remove the tape — all while holding the tube.',
+    answer: 'Attach syringe and flush with 30 mL of water. Replace cap. Carefully remove adhesive tape from the patient\'s nose while holding the tube.',
+    scene: 'secure', equipment: ['60 ml Syringe', '30 mL Water']
+  },
+  {
+    phase: 'REMOVAL', num: 9, critical: true,
+    context: 'Tube is flushed and tape removed. What do you instruct the patient to do and why?',
+    hint: 'Breath-holding closes the glottis and prevents aspiration during removal.',
+    answer: 'Instruct the patient to take a deep breath and hold it.',
+    scene: 'insert', equipment: []
+  },
+  {
+    phase: 'REMOVAL', num: 10, critical: false,
+    context: 'Patient is holding their breath. How do you remove the tube?',
+    hint: 'Quick and careful, while the patient holds their breath. Then let them know they can breathe. Wrap and discard.',
+    answer: 'Quickly and carefully remove the tube while the patient holds their breath. Let the patient know they can breathe. Wrap the tube in the nonsterile drape and discard. Dispose of tube per agency policy.',
+    scene: 'remove', equipment: ['Nonsterile Drape']
+  },
+  {
+    phase: 'REMOVAL', num: 11, critical: false,
+    context: 'Tube removed. How do you provide immediate patient comfort?',
+    hint: 'Think about mouth and nose comfort.',
+    answer: 'Offer mouth care to the patient and tissues to blow their nose.',
+    scene: 'care', equipment: ['Oral Hygiene Supplies', 'Tissues']
+  },
+  {
+    phase: 'REMOVAL', num: 12, critical: false,
+    context: 'Patient is comfortable. What do you do before performing your post-removal assessment?',
+    hint: 'Remove PPE in the correct order, then hand hygiene.',
+    answer: 'Remove gloves and PPE. Perform hand hygiene.',
+    scene: 'hygiene', equipment: ['Hand Hygiene']
+  },
+  {
+    phase: 'REMOVAL', num: 13, critical: true,
+    context: 'Clean and gloved appropriately. What post-removal assessment do you perform?',
+    hint: 'Use a specific tool to check two specific structures for any irritation.',
+    answer: 'Use a penlight to assess the nares and throat for any irritation.',
+    scene: 'assess', equipment: ['Penlight']
+  },
+  {
+    phase: 'REMOVAL', num: 14, critical: false,
+    context: 'Assessment done. If the tube had been connected to suction, what do you do regarding the collection device?',
+    hint: 'Note color + amount, record it, subtract irrigant fluids, discard canister, and immediately replace it.',
+    answer: 'Lower the bed and assist the patient to a position of comfort. If tube was connected to suction: put on gloves, note the color and measurement of NG contents in the collection device, record on output record (subtracting irrigant fluids if necessary), discard the suction canister and all tubing per agency policy, then immediately put a new suction canister and tubing in its place.',
+    scene: 'care', equipment: ['Suction Canister (replace)']
+  },
+  {
+    phase: 'REMOVAL', num: 15, critical: true,
+    context: 'Everything is wrapped up. What is the final and critical step — and what specifically must your documentation include?',
+    hint: 'Document your GI assessment findings, placement verification, flush status, patient tolerance, nare/throat assessment, and suction output if applicable.',
+    answer: 'Document the procedure including: your GI assessment findings, how you verified placement and whether you flushed before removal, that you removed the nasogastric tube, how the patient tolerated the procedure, and assessment of the nares and throat. If connected to suction: document the amount and color. Include the amount as output on the I&Os. Immediately after documentation, put a new suction canister and tubing in its place.',
+    scene: 'chart', equipment: ['Chart / Documentation']
+  },
+];
+
+// ── State ──
+let currentIdx = 0;
+let phaseTransitionShown = false;
+const INSERTION_COUNT = 29; // steps 0-28 are insertion (29 steps)
+const TOTAL = STEPS.length; // 44 total (29 insertion + 15 removal)
+
+let stepLog = []; // { idx, hintUsed, answerUsed, skipped, answered }
+
+function togglePatientPanel() {
+  const panel = document.getElementById('patient-panel');
+  const arrow = document.getElementById('toggle-arrow');
+  panel.classList.toggle('expanded');
+  arrow.textContent = panel.classList.contains('expanded') ? '▲' : '▼';
+}
+
+
+
+function getOverallStep(idx) {
+  // Display step number for progress
+  return idx + 1;
+}
+
+function isTransitionPoint(idx) {
+  return idx === INSERTION_COUNT && !phaseTransitionShown;
+}
+
+function startSim() {
+  document.getElementById('welcome-screen').classList.remove('active');
+  document.getElementById('sim-screen').classList.add('active');
+  currentIdx = 0;
+  phaseTransitionShown = false;
+  stepLog = [];
+  renderStep();
+}
+
+function renderStep() {
+  if (currentIdx >= TOTAL) {
+    showReport();
+    return;
+  }
+
+  // Phase transition
+  if (currentIdx === INSERTION_COUNT && !phaseTransitionShown) {
+    showPhaseTransition();
+    return;
+  }
+
+  const step = STEPS[currentIdx];
+  updateTopBar(step);
+  updatePatientVisual(step);
+
+  const panel = document.getElementById('interaction-panel');
+  panel.innerHTML = buildStepHTML(step, currentIdx);
+}
+
+function updateTopBar(step) {
+  const pct = Math.round((currentIdx / TOTAL) * 100);
+  document.getElementById('prog-bar').style.width = pct + '%';
+  document.getElementById('prog-label').textContent = `Step ${currentIdx + 1} of ${TOTAL}`;
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('phase-badge').textContent = step.phase;
+}
+
+function updatePatientVisual(step) {
+  const scene = step.scene;
+
+  // SVG states
+  const tube = document.getElementById('ng-tube-svg');
+  const tape = document.getElementById('tape-svg');
+  const hob = document.getElementById('hob-indicator');
+  const ppe = document.getElementById('ppe-indicator');
+
+  // Reset
+  tube.style.opacity = '0';
+  tape.style.opacity = '0';
+  hob.style.opacity = '0';
+  ppe.style.opacity = '0';
+
+  const sceneLabels = {
+    chart: 'Reviewing chart / orders',
+    gather: 'Gathering equipment',
+    hygiene: 'Hand hygiene station',
+    identify: 'Checking patient ID',
+    explain: 'Patient education',
+    privacy: 'Ensuring patient privacy',
+    bed: 'Adjusting bed height',
+    fowlers: 'High Fowler\'s (90°)',
+    assess: 'Performing assessment',
+    prep: 'Prepping supplies',
+    measure: 'Measuring tube length',
+    ppe: 'PPE donned',
+    insert: 'Tube insertion in progress',
+    secure: 'Securing tube',
+    verify: 'Verifying placement',
+    care: 'Ongoing patient care',
+    remove: 'Removing NG tube',
+  };
+  const label = document.getElementById('scene-label');
+  if (label) label.textContent = sceneLabels[scene] || scene;
+
+  if (scene === 'fowlers' || scene === 'explain' || scene === 'care' || scene === 'privacy') {
+    hob.style.opacity = '1';
+  }
+  if (scene === 'ppe' || scene === 'insert' || scene === 'secure' || scene === 'verify') {
+    hob.style.opacity = '1';
+    ppe.style.opacity = '1';
+  }
+  if (scene === 'insert' || scene === 'secure' || scene === 'verify') {
+    tube.style.opacity = '1';
+  }
+  if (scene === 'secure') {
+    tape.style.opacity = '1';
+  }
+  if (scene === 'remove') {
+    hob.style.opacity = '1';
+    ppe.style.opacity = '1';
+  }
+
+  // Equipment list
+  const eqList = document.getElementById('equipment-list');
+  if (step.equipment && step.equipment.length > 0) {
+    eqList.innerHTML = `<div class="equipment-title">Active Equipment</div>` +
+      step.equipment.map(e => `<div class="equipment-item active"><div class="eq-dot"></div>${e}</div>`).join('');
+  } else {
+    eqList.innerHTML = '';
+  }
+}
+
+function buildStepHTML(step, idx) {
+  const phaseLabel = step.phase === 'INSERTION' ? `Insertion — Step ${step.num}` : `Removal — Step ${step.num}`;
+  const critHTML = step.critical ? `<div class="critical-badge">★ Critical Step</div>` : '';
+
+  return `
+    <div class="step-header">
+      <div class="step-number ${step.critical ? 'critical' : ''}">${phaseLabel}</div>
+      <div class="step-title-block">
+        ${critHTML}
+        <div class="step-context">${step.context}</div>
+      </div>
+    </div>
+
+    <div class="challenge-box">
+      <div class="challenge-prompt">// Your response — what should you do next?</div>
+      <textarea class="response-textarea" id="response-ta" placeholder="Type what you would do at this step…"></textarea>
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-next" onclick="submitStep(${idx})">Mark Complete →</button>
+      <button class="btn btn-hint" onclick="toggleReveal('hint-panel-${idx}')">💡 Hint</button>
+      <button class="btn btn-answer" onclick="toggleReveal('answer-panel-${idx}')">📋 Show Answer</button>
+      <button class="btn btn-skip" onclick="skipStep(${idx})">Skip</button>
+    </div>
+
+    <div class="reveal-panel hint-panel" id="hint-panel-${idx}">
+      <div class="reveal-label">Hint</div>
+      <div class="reveal-text">${step.hint}</div>
+    </div>
+
+    <div class="reveal-panel answer-panel" id="answer-panel-${idx}">
+      <div class="reveal-label">Full Answer (from PDF)</div>
+      <div class="reveal-text">${step.answer}</div>
+    </div>
+  `;
+}
+
+function toggleReveal(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('visible');
+
+  // Track usage
+  const parts = id.split('-');
+  const type = parts[0]; // 'hint' or 'answer'
+  const idx = parseInt(parts[parts.length - 1]);
+
+  if (el.classList.contains('visible')) {
+    if (!stepLog[idx]) stepLog[idx] = {};
+    if (type === 'hint') stepLog[idx].hintUsed = true;
+    if (type === 'answer') stepLog[idx].answerUsed = true;
+  }
+}
+
+function submitStep(idx) {
+  if (!stepLog[idx]) stepLog[idx] = {};
+  stepLog[idx].answered = true;
+  currentIdx++;
+  renderStep();
+  document.querySelector('.sim-body')?.scrollTo(0, 0);
+  window.scrollTo(0, 0);
+}
+
+function skipStep(idx) {
+  if (!stepLog[idx]) stepLog[idx] = {};
+  stepLog[idx].skipped = true;
+  currentIdx++;
+  renderStep();
+  document.querySelector('.sim-body')?.scrollTo(0, 0);
+  window.scrollTo(0, 0);
+}
+
+function showPhaseTransition() {
+  phaseTransitionShown = true;
+  const panel = document.getElementById('interaction-panel');
+  panel.innerHTML = `
+    <div class="phase-transition">
+      <div class="pt-icon">✅</div>
+      <h2>Insertion Phase Complete</h2>
+      <p>You have completed all 29 insertion steps. Now you will practice <strong>removing</strong> the nasogastric tube. The same principles apply — verify placement, protect the patient, document everything.</p>
+      <button class="btn btn-next" onclick="beginRemoval()" style="margin:0 auto;">Begin Removal Phase →</button>
+    </div>
+  `;
+  document.getElementById('phase-badge').textContent = 'REMOVAL';
+}
+
+function beginRemoval() {
+  renderStep();
+}
+
+// ── REPORT ──
+function showReport() {
+  document.getElementById('sim-screen').classList.remove('active');
+  document.getElementById('report-screen').classList.add('active');
+
+  let hintsUsed = 0, answersUsed = 0, skipped = 0, answered = 0;
+  STEPS.forEach((s, i) => {
+    const log = stepLog[i] || {};
+    if (log.hintUsed) hintsUsed++;
+    if (log.answerUsed) answersUsed++;
+    if (log.skipped) skipped++;
+    if (log.answered) answered++;
+  });
+
+  const total = STEPS.length;
+  const independent = total - hintsUsed - answersUsed - skipped;
+  const score = Math.max(0, Math.round((independent / total) * 100));
+
+  document.getElementById('score-grid').innerHTML = `
+    <div class="score-cell"><div class="sc-val sc-green">${score}%</div><div class="sc-label">Independence Score</div></div>
+    <div class="score-cell"><div class="sc-val sc-green">${answered}</div><div class="sc-label">Steps Completed</div></div>
+    <div class="score-cell"><div class="sc-val sc-amber">${hintsUsed}</div><div class="sc-label">Hints Used</div></div>
+    <div class="score-cell"><div class="sc-val sc-blue">${answersUsed}</div><div class="sc-label">Answers Revealed</div></div>
+    <div class="score-cell"><div class="sc-val sc-red">${skipped}</div><div class="sc-label">Steps Skipped</div></div>
+  `;
+
+  const stepsHTML = STEPS.map((step, i) => {
+    const log = stepLog[i] || {};
+    const tags = [];
+    if (step.critical) tags.push('<span class="rs-tag critical">★ Critical</span>');
+    if (log.skipped) tags.push('<span class="rs-tag skipped">Skipped</span>');
+    else if (log.answered) tags.push('<span class="rs-tag completed">Completed</span>');
+    if (log.hintUsed) tags.push('<span class="rs-tag hint-used">💡 Hint Used</span>');
+    if (log.answerUsed) tags.push('<span class="rs-tag answer-used">📋 Answer Revealed</span>');
+
+    const icon = log.skipped ? '⬜' : log.answered ? '✅' : '⬜';
+    const phaseLabel = step.phase === 'INSERTION' ? `I-${step.num}` : `R-${step.num}`;
+
+    return `
+      <div class="report-step-row">
+        <div class="rs-num">${phaseLabel}</div>
+        <div class="rs-content">
+          <div class="rs-title">${step.context}</div>
+          <div class="rs-meta">${tags.join('')}</div>
+          <div class="rs-title" style="color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5;">${step.answer}</div>
+        </div>
+        <div class="rs-icon">${icon}</div>
+      </div>
+    `;
+  }).join('');
+
+  document.getElementById('report-steps').innerHTML = stepsHTML;
+}
+
+function restartSim() {
+  currentIdx = 0;
+  phaseTransitionShown = false;
+  stepLog = [];
+  document.getElementById('report-screen').classList.remove('active');
+  document.getElementById('welcome-screen').classList.add('active');
+}
+</script>
+</body>
+</html>
